@@ -1,0 +1,5 @@
+/target
+**/*.rs.bk
+/sample_audio
+Cargo.lock
+**/*.svg
