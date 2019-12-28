@@ -68,6 +68,19 @@ fn change_speed(fp: &mut f64, speed: f64) {
 }
 
 #[allow(dead_code)]
+fn change_spectral_envelope(sp: &mut Vec<Vec<f64>>, ratio: f64) {
+    let tmp_sp = sp.clone();
+    for (i, y) in sp.iter_mut().enumerate() {
+	for (j, x) in y.iter_mut().enumerate() {
+	    let idx = (j as f64/ratio) as usize;
+	    if idx<tmp_sp[0].len() {
+		*x = tmp_sp[i][idx];
+	    }
+	}
+    }
+}
+
+#[allow(dead_code)]
 fn to_female(f0: &mut Vec<f64>, sp: &mut Vec<Vec<f64>>) {
     for x in f0.iter_mut() {
     	*x *= 2.5;
@@ -108,9 +121,10 @@ fn main() {
     let data: Vec<f64> = source.clone().map(|d| d as f64).collect();
     #[allow(unused_mut)]
     let (mut f0, mut sp, ap, mut fp) = wav2world(&data, fs as i32);
-    // change_pitch(&mut f0, 4.0);
+    change_pitch(&mut f0, 0.5);
+    // change_speed(&mut fp, 3.5);
+    change_spectral_envelope(&mut sp, 0.5);
     // to_robot(&mut f0);
-    // change_speed(&mut fp, 10.0);
     // to_female(&mut f0, &mut sp);
     // to_mosaic(&mut f0, &mut sp);
     let data: Vec<i16> = synthesis(&f0, &sp, &ap, fp, fs as i32).iter().map(|d| *d as i16).collect();
