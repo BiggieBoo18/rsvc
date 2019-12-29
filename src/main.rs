@@ -11,6 +11,7 @@ use plotlib::view::ContinuousView;
 use plotlib::style::Line;
 use failure::Error;
 use cpal::traits::{DeviceTrait, EventLoopTrait, HostTrait};
+use device_query::{DeviceQuery, DeviceState, Keycode};
 #[allow(unused_imports)]
 use Rust_WORLD::rsworld::{
     cheaptrick,
@@ -28,6 +29,7 @@ use Rust_WORLD::rsworld_sys::{
     HarvestOption,
 };
 
+#[allow(dead_code)]
 fn draw_spectrum(data: &Vec<(f64, f64)>, outpath: &str) -> Result<(), Error> {
     let mut style = plotlib::line::Style::new();
     let li = plotlib::line::Line::new(&data)
@@ -154,7 +156,7 @@ fn record(path: &str, sec: u64) -> Result<(), anyhow::Error> {
     let writer = std::sync::Arc::new(std::sync::Mutex::new(Some(writer)));
 
     // A flag to indicate that recording is in progress.
-    println!("Begin recording...");
+    println!("Begin recording for {} sec...", sec);
     let recording = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
 
     // Run the input stream on a separate thread.
@@ -185,16 +187,6 @@ fn record(path: &str, sec: u64) -> Result<(), anyhow::Error> {
                         }
                     }
                 },
-                cpal::StreamData::Input { buffer: cpal::UnknownTypeInputBuffer::F32(buffer) } => {
-                    if let Ok(mut guard) = writer_2.try_lock() {
-                        if let Some(writer) = guard.as_mut() {
-
-                            for &sample in buffer.iter() {
-                                writer.write_sample(sample).ok();
-                            }
-                        }
-                    }
-                },
                 _ => (),
             }
         });
@@ -210,30 +202,37 @@ fn record(path: &str, sec: u64) -> Result<(), anyhow::Error> {
 
 fn main() {
     let path = concat!(env!("CARGO_MANIFEST_DIR"), "/recorded.wav");
-    record(path, 3).unwrap();
     let device = rodio::default_output_device().unwrap();
     let sink = rodio::Sink::new(&device);
-    
-    let file = File::open(path).unwrap();
-    let source  = rodio::Decoder::new(io::BufReader::new(file)).unwrap().buffered();
-    let fs = source.sample_rate();
+    let device_state = DeviceState::new();
 
-    let data: Vec<f64> = source.clone().map(|d| d as f64).collect();
-    #[allow(unused_mut)]
-    let (mut f0, mut sp, ap, mut fp) = wav2world(&data, fs as i32);
-    // change_pitch(&mut f0, 0.5);
-    // change_speed(&mut fp, 3.5);
-    // change_spectral_envelope(&mut sp, 0.5);
-    // to_robot(&mut f0);
-    // to_female(&mut f0, &mut sp);
-    // to_mosaic(&mut f0, &mut sp);
-    let data: Vec<i16> = synthesis(&f0, &sp, &ap, fp, fs as i32).iter().map(|d| *d as i16).collect();
-    let source = SamplesBuffer::new(1, fs as u32, data).buffered();
-    
-    let data: Vec<(f64, f64)> = source.clone().enumerate().map(|(i, x)| (i as f64, x as f64)).collect();
-    draw_spectrum(&data, "line.svg").expect("Failed draw graph");
+    println!("Start with [Space] key...");
+    loop {
+	let keys = device_state.get_keys();
+	if !keys.contains(&Keycode::Space) {
+	    continue;
+	}
+	record(path, 3).unwrap();
+	let file = File::open(path).unwrap();
+	let source  = rodio::Decoder::new(io::BufReader::new(file)).unwrap().buffered();
+	let fs = source.sample_rate();
 
+	let data: Vec<f64> = source.clone().map(|d| d as f64).collect();
+	#[allow(unused_mut)]
+	let (mut f0, mut sp, ap, mut fp) = wav2world(&data, fs as i32);
+	// change_pitch(&mut f0, 0.5);
+	// change_speed(&mut fp, 3.5);
+	// change_spectral_envelope(&mut sp, 0.5);
+	// to_robot(&mut f0);
+	// to_female(&mut f0, &mut sp);
+	// to_mosaic(&mut f0, &mut sp);
+	let data: Vec<i16> = synthesis(&f0, &sp, &ap, fp, fs as i32).iter().map(|d| *d as i16).collect();
+	let source = SamplesBuffer::new(1, fs as u32, data).buffered();
 
-    sink.append(source.clone());
-    sink.sleep_until_end();
+	// let data: Vec<(f64, f64)> = source.clone().enumerate().map(|(i, x)| (i as f64, x as f64)).collect();
+	// draw_spectrum(&data, "line.svg").expect("Failed draw graph");
+
+	sink.append(source.clone());
+	sink.sleep_until_end();
+    }
 }
