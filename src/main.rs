@@ -216,25 +216,28 @@ fn main() {
 	let file = File::open(path).unwrap();
 	let source  = rodio::Decoder::new(io::BufReader::new(file)).unwrap().buffered();
 	let fs = source.sample_rate();
-
-	let data: Vec<f64> = source.clone().map(|d| d as f64).step_by(2).collect();
+	
+	let even = source.clone().map(|d| d as f64).skip(1).step_by(2);
+	let data: Vec<f64> = source.clone().map(|d| d as f64).step_by(2).zip(even).map(|(o, e)| e*0.5+o*0.5).collect();
 	#[allow(unused_mut)]
 	let (mut f0, mut sp, ap, mut fp) = wav2world(&data, fs as i32);
 	// change_pitch(&mut f0, 0.5);
 	// change_speed(&mut fp, 3.5);
 	// change_spectral_envelope(&mut sp, 0.5);
-	println!("[R]: Robot\n[F]: Female\n[M]: Mosic");
+	println!("[N]: Normal\n[R]: Robot\n[F]: Female\n[M]: Mosic");
 	let mut volume = 1.0;
 	loop {
 	    keys = device_state.get_keys();
-	    if keys.contains(&Keycode::R) {
+	    if keys == vec![Keycode::N] {        // Normal
+		break;
+	    } else if keys == vec![Keycode::R] { // Robot
 		to_robot(&mut f0);
 		volume = 2.0;
 		break;
-	    } else if keys.contains(&Keycode::F) {
+	    } else if keys == vec![Keycode::F] { // Female
 		to_female(&mut f0, &mut sp);
 		break;
-	    } else if keys.contains(&Keycode::M) {
+	    } else if keys == vec![Keycode::M] { // Mosaic
 		to_mosaic(&mut f0, &mut sp);
 		volume = 4.0;
 		break;
