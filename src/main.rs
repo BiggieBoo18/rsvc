@@ -143,7 +143,7 @@ fn record(path: &str, sec: u64) -> Result<(), anyhow::Error> {
     let device = host.default_input_device().expect("Failed to get default input device");
     // println!("Default input device: {}", device.name()?);
     let mut format = device.default_input_format().expect("Failed to get default input format");
-    format.channels  = 1;
+    format.channels  = 2;
     format.data_type = cpal::SampleFormat::I16;
     // println!("Default input format: {:?}", format);
     let event_loop = host.event_loop();
@@ -156,7 +156,7 @@ fn record(path: &str, sec: u64) -> Result<(), anyhow::Error> {
     let writer = std::sync::Arc::new(std::sync::Mutex::new(Some(writer)));
 
     // A flag to indicate that recording is in progress.
-    println!("Begin recording for {} sec...", sec);
+    println!("\nBegin recording for {} sec...", sec);
     let recording = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
 
     // Run the input stream on a separate thread.
@@ -206,9 +206,9 @@ fn main() {
     let sink = rodio::Sink::new(&device);
     let device_state = DeviceState::new();
 
-    println!("Start with [Space] key...");
+    println!("\nStart with [Space] key...");
     loop {
-	let keys = device_state.get_keys();
+	let mut keys = device_state.get_keys();
 	if !keys.contains(&Keycode::Space) {
 	    continue;
 	}
@@ -217,16 +217,30 @@ fn main() {
 	let source  = rodio::Decoder::new(io::BufReader::new(file)).unwrap().buffered();
 	let fs = source.sample_rate();
 
-	let data: Vec<f64> = source.clone().map(|d| d as f64).collect();
+	let data: Vec<f64> = source.clone().map(|d| d as f64).step_by(2).collect();
 	#[allow(unused_mut)]
 	let (mut f0, mut sp, ap, mut fp) = wav2world(&data, fs as i32);
 	// change_pitch(&mut f0, 0.5);
 	// change_speed(&mut fp, 3.5);
 	// change_spectral_envelope(&mut sp, 0.5);
-	// to_robot(&mut f0);
-	// to_female(&mut f0, &mut sp);
-	// to_mosaic(&mut f0, &mut sp);
-	let data: Vec<i16> = synthesis(&f0, &sp, &ap, fp, fs as i32).iter().map(|d| *d as i16).collect();
+	println!("[R]: Robot\n[F]: Female\n[M]: Mosic");
+	let mut volume = 1.0;
+	loop {
+	    keys = device_state.get_keys();
+	    if keys.contains(&Keycode::R) {
+		to_robot(&mut f0);
+		volume = 2.0;
+		break;
+	    } else if keys.contains(&Keycode::F) {
+		to_female(&mut f0, &mut sp);
+		break;
+	    } else if keys.contains(&Keycode::M) {
+		to_mosaic(&mut f0, &mut sp);
+		volume = 4.0;
+		break;
+	    }
+	}
+	let data: Vec<i16> = synthesis(&f0, &sp, &ap, fp, fs as i32).iter().map(|d| (*d * volume) as i16).collect();
 	let source = SamplesBuffer::new(1, fs as u32, data).buffered();
 
 	// let data: Vec<(f64, f64)> = source.clone().enumerate().map(|(i, x)| (i as f64, x as f64)).collect();
@@ -234,5 +248,6 @@ fn main() {
 
 	sink.append(source.clone());
 	sink.sleep_until_end();
+	println!("\nStart with [Space] key...");
     }
 }
