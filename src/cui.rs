@@ -1,5 +1,5 @@
 pub fn main_menu() {
-    println!("\n[P]: Change pitch\n[O]: Change speed\n[I]: Change spectral envelope\n[V]: Change volume\n[1]: Play\n[2]: Robot\n[3]: Female\n[4]: Mosic\n[R]: Reset\n[Esc]: Record");
+    println!("\n[P]: Change pitch\n[O]: Change speed\n[I]: Change spectral envelope\n[V]: Change volume\n[1]: Play\n[2]: Robot mode\n[3]: Female mode\n[4]: Mosic mode\n[R]: Reset\n[Esc]: Record");
 }
 
 pub fn pitch_menu() {

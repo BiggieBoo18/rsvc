@@ -3,3 +3,4 @@
 /sample_audio
 Cargo.lock
 **/*.svg
+**/*.wav

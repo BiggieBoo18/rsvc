@@ -158,7 +158,6 @@ fn main() {
 		sink.append(source.clone());
 		sink.sleep_until_end();
 		main_menu();
-		sp = orig_sp.clone();
 	    } else if keys == vec![Keycode::Key2] { // Robot
 		if !robot_flag {
 		    sp = orig_sp.clone();
