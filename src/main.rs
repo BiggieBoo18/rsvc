@@ -163,6 +163,7 @@ fn main() {
 		    sp = orig_sp.clone();
 	    	    to_robot(&mut f0);
 		    robot_flag = true;
+		    volume = 2.0;
 		    println!("\nRobot [On]");
 		}
 		main_menu();
@@ -179,6 +180,7 @@ fn main() {
 		    sp = orig_sp.clone();
 	    	    to_mosaic(&mut f0, &mut sp);
 		    mosaic_flag = true;
+		    volume = 3.0;
 		    println!("\nMosaic [On]");
 		}
 		main_menu();
